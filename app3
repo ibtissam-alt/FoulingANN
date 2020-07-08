@@ -33,55 +33,59 @@ class Main(QWidget, ui_file):
         self.push.setStyleSheet(stylesheet(self))
         self.push1.setText("ANN")
         self.push1.setStyleSheet(stylesheet(self))
+        self.push1.setEnabled(False)
+        self.push1.clicked.connect(self.ANN)
 
-    def ANN(self, fileName):
+    def ANN(self):
         print(self.file)
+        dataset = pd.read_csv(self.fileName, sep=";", decimal=",")
+        print("***************************")
+        print(dataset)
+        x = dataset.iloc[:, :7].values
+        y = dataset.iloc[:, 7].values
+        print(y)
+        # Normalization
+
+        sc = MinMaxScaler()
+        x = sc.fit_transform(x)
+        y = y.reshape(-1, 1)
+        y = sc.fit_transform(y)
+
+        # Splitting the dataset into the Training set and Test set
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.10, random_state=4)
+        x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.05, random_state=4)
+
+        # built Keras sequential model
+        model = Sequential()
+        # Adding the input layer:
+        model.add(Dense(7, input_dim=x_train.shape[1], activation='relu'))
+        # the first hidden layer:
+        model.add(Dense(12, activation='relu'))
+        # Adding the output layer
+        model.add(Dense(1, activation='sigmoid'))
+
+        # Compiling the ANN
+        model.compile(optimizer='Nadam', loss='mean_squared_error', metrics=['mse', 'mae', rmse])
+
+        # enable early stopping based on mean_squared_error
+        # earlystopping=EarlyStopping(monitor="mean_squared_error", patience=40, verbose=1, mode='auto')
+
+        # Fitting the ANN to the Training set
+        result = model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=100, epochs=10)
+
+        # get predictions
+        y_pred = model.predict(x_test)
+        print("R square (R^2):                 %f" % sklearn.metrics.r2_score(y_test, y_pred))
+        self.textBrowser.setText(os.path.basename(fileName))
+        self.textBrowser_2.setText("R square (R^2):                 %f" % sklearn.metrics.r2_score(y_test, y_pred))
 
     def loadCsv(self, fileName):
-        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open CSV",
+        self.fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open CSV",
                                                             "C:/Users/hp/Downloads/PFE_fouling/resultats",
                                                             "CSV (*.csv *.tsv )")
-        if fileName and os.path.isfile(fileName):
-            dataset = pd.read_csv(fileName, sep=";", decimal=",")
-            print("***************************")
-            print(dataset)
-            x = dataset.iloc[:, :7].values
-            y = dataset.iloc[:, 7].values
-            print(y)
-            # Normalization
-
-            sc = MinMaxScaler()
-            x = sc.fit_transform(x)
-            y = y.reshape(-1, 1)
-            y = sc.fit_transform(y)
-
-            # Splitting the dataset into the Training set and Test set
-            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.10, random_state=4)
-            x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.05, random_state=4)
-
-            # built Keras sequential model
-            model = Sequential()
-            # Adding the input layer:
-            model.add(Dense(7, input_dim=x_train.shape[1], activation='relu'))
-            # the first hidden layer:
-            model.add(Dense(12, activation='relu'))
-            # Adding the output layer
-            model.add(Dense(1, activation='sigmoid'))
-
-            # Compiling the ANN
-            model.compile(optimizer='Nadam', loss='mean_squared_error', metrics=['mse', 'mae', rmse])
-
-            # enable early stopping based on mean_squared_error
-            # earlystopping=EarlyStopping(monitor="mean_squared_error", patience=40, verbose=1, mode='auto')
-
-            # Fitting the ANN to the Training set
-            result = model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=100, epochs=10)
-
-            # get predictions
-            y_pred = model.predict(x_test)
-            print("R square (R^2):                 %f" % sklearn.metrics.r2_score(y_test, y_pred))
-            self.textBrowser.setText(os.path.basename(fileName))
-            self.textBrowser_2.setText("R square (R^2):                 %f" % sklearn.metrics.r2_score(y_test, y_pred))
+        if self.fileName and os.path.isfile(self.fileName):
+            self.push1.setEnabled(True)
+            
 
 
 # root mean squared error (rmse) for regression
